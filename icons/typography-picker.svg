@@ -1,0 +1,31 @@
+<svg width="48" height="48" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
+  <!-- Typography icon with Aa text -->
+  <defs>
+    <linearGradient id="typoGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#667eea"/>
+      <stop offset="100%" style="stop-color:#764ba2"/>
+    </linearGradient>
+  </defs>
+  
+  <!-- Background rectangle -->
+  <rect x="4" y="8" width="40" height="32" rx="4" 
+        fill="url(#typoGradient)" 
+        stroke="#333" 
+        stroke-width="2"/>
+  
+  <!-- White text area -->
+  <rect x="8" y="12" width="32" height="24" rx="2" fill="white"/>
+  
+  <!-- Aa text -->
+  <text x="24" y="28" 
+        font-family="Georgia, serif" 
+        font-size="18" 
+        font-weight="bold" 
+        text-anchor="middle" 
+        fill="#333">Aa</text>
+  
+  <!-- Text lines hint -->
+  <line x1="12" y1="18" x2="20" y2="18" stroke="#ddd" stroke-width="1"/>
+  <line x1="28" y1="18" x2="36" y2="18" stroke="#ddd" stroke-width="1"/>
+  <line x1="12" y1="34" x2="36" y2="34" stroke="#ddd" stroke-width="1"/>
+</svg>
