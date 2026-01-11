@@ -15,6 +15,13 @@ class PickyContentScript {
             sendResponse({ received: true });
         });
 
+        // Add escape key listener
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                this.deactivateAll();
+            }
+        });
+
         // Create cursor circle for color picker
         this.createCursorCircle();
     }
@@ -29,6 +36,12 @@ class PickyContentScript {
                 break;
             case 'toggleTypographyPicker':
                 this.toggleTypographyPicker(message.active);
+                break;
+            case 'deactivateAll':
+                this.deactivateAll();
+                break;
+            case 'getCurrentState':
+                this.reportCurrentState();
                 break;
         }
     }
@@ -52,9 +65,11 @@ class PickyContentScript {
         if (active) {
             this.showCursorCircle();
             this.addColorPickerListeners();
+            this.sendMessage({ action: 'colorPickerActivated' });
         } else {
             this.hideCursorCircle();
             this.removeColorPickerListeners();
+            this.sendMessage({ action: 'colorPickerDeactivated' });
         }
     }
 
@@ -65,15 +80,22 @@ class PickyContentScript {
         if (active) {
             this.hideCursorCircle();
             this.addTypographyPickerListeners();
+            this.sendMessage({ action: 'typographyPickerActivated' });
         } else {
             this.removeTypographyPickerListeners();
+            this.sendMessage({ action: 'typographyPickerDeactivated' });
         }
     }
 
     createCursorCircle() {
         this.cursorCircle = document.createElement('div');
         this.cursorCircle.id = 'picky-color-circle';
-        this.cursorCircle.innerHTML = '<div class="picky-circle-inner">+</div>';
+        this.cursorCircle.innerHTML = `
+            <div class="picky-circle-inner">
+                <div class="picky-plus-horizontal"></div>
+                <div class="picky-plus-vertical"></div>
+            </div>
+        `;
         document.body.appendChild(this.cursorCircle);
     }
 
@@ -114,9 +136,9 @@ class PickyContentScript {
     handleMouseMove(e) {
         if (!this.colorPickerActive) return;
 
-        // Update cursor circle position
-        this.cursorCircle.style.left = (e.clientX - 25) + 'px';
-        this.cursorCircle.style.top = (e.clientY - 25) + 'px';
+        // Update cursor circle position (80px circle, so -40px offset)
+        this.cursorCircle.style.left = (e.clientX - 40) + 'px';
+        this.cursorCircle.style.top = (e.clientY - 40) + 'px';
 
         // Get color at cursor position
         const color = this.getColorAtPosition(e.clientX, e.clientY);
@@ -329,6 +351,31 @@ class PickyContentScript {
     removeEventListeners() {
         this.removeColorPickerListeners();
         this.removeTypographyPickerListeners();
+    }
+
+    deactivateAll() {
+        if (this.colorPickerActive) {
+            this.toggleColorPicker(false);
+        }
+        if (this.typographyPickerActive) {
+            this.toggleTypographyPicker(false);
+        }
+        this.sendMessage({ action: 'allPickersDeactivated' });
+    }
+    
+    reportCurrentState() {
+        let state = null;
+        if (this.colorPickerActive) {
+            state = 'color';
+        } else if (this.typographyPickerActive) {
+            state = 'typography';
+        }
+        
+        if (state) {
+            this.sendMessage({ action: `${state}PickerActivated` });
+        } else {
+            this.sendMessage({ action: 'allPickersDeactivated' });
+        }
     }
 
     sendMessage(message) {

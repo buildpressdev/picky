@@ -16,6 +16,7 @@
         <main class="picky-main">
             <!-- Color Picker Block -->
             <div class="picky-block" 
+                 :class="{ 'active': activePicker === 'color' }"
                  @click="activateColorPicker()">
                 <div class="block-icon">
                     <img src="icons/color-picker-24.png" alt="Color Picker" class="icon-image">
@@ -24,6 +25,7 @@
 
             <!-- Typography Block -->
             <div class="picky-block" 
+                 :class="{ 'active': activePicker === 'typography' }"
                  @click="activateTypographyPicker()">
                 <div class="block-icon">
                     <img src="icons/typography-picker-24.png" alt="Typography Picker" class="icon-image">
