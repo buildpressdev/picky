@@ -1,7 +1,6 @@
 // Content Script - Handles interaction with webpage
 class PickyContentScript {
     constructor() {
-        this.mode = null; // 'color' or 'typography'
         this.colorPickerActive = false;
         this.typographyPickerActive = false;
         this.cursorCircle = null;
