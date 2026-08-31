@@ -91,15 +91,18 @@ function pickyApp() {
         sendMessageToContent(message) {
             chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
                 if (tabs[0]) {
-                    chrome.tabs.sendMessage(tabs[0].id, message);
+                    chrome.tabs.sendMessage(tabs[0].id, message, () => {
+                        if (chrome.runtime.lastError) {
+                            console.warn('Content script not ready:', chrome.runtime.lastError.message);
+                        }
+                    });
                 }
             });
         }
     };
 }
 
-// Initialize Alpine
+// Register with Alpine
 document.addEventListener('alpine:init', () => {
-    window.Alpine = window.Alpine || Alpine;
-    window.Alpine.start();
+    Alpine.data('pickyApp', () => pickyApp());
 });

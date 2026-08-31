@@ -114,3 +114,29 @@ body.picky-color-mode {
 body.picky-typography-mode {
     cursor: text !important;
 }
+
+/* Selection flash animation */
+@keyframes pickyFlash {
+    0% {
+        box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.8);
+        transform: scale(1);
+    }
+    50% {
+        box-shadow: 0 0 0 8px rgba(102, 126, 234, 0.4);
+        transform: scale(1.15);
+    }
+    100% {
+        box-shadow: 0 0 0 4px rgba(102, 126, 234, 0);
+        transform: scale(1);
+    }
+}
+
+#picky-color-circle.flash {
+    animation: pickyFlash 0.4s ease-out;
+}
+
+.picky-typo-flash {
+    outline: 3px solid #667eea !important;
+    outline-offset: 2px;
+    transition: outline 0.3s ease-out;
+}

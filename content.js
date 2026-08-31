@@ -5,6 +5,10 @@ class PickyContentScript {
         this.colorPickerActive = false;
         this.typographyPickerActive = false;
         this.cursorCircle = null;
+        this.colorCanvas = null;
+        this.colorCtx = null;
+        this.lastColorUpdate = 0;
+        this.COLOR_THROTTLE_MS = 50;
         this.init();
     }
 
@@ -97,6 +101,12 @@ class PickyContentScript {
             </div>
         `;
         document.body.appendChild(this.cursorCircle);
+
+        // Create off-screen canvas for pixel color sampling
+        this.colorCanvas = document.createElement('canvas');
+        this.colorCanvas.width = 1;
+        this.colorCanvas.height = 1;
+        this.colorCtx = this.colorCanvas.getContext('2d', { willReadFrequently: true });
     }
 
     showCursorCircle() {
@@ -140,6 +150,11 @@ class PickyContentScript {
         this.cursorCircle.style.left = (e.clientX - 40) + 'px';
         this.cursorCircle.style.top = (e.clientY - 40) + 'px';
 
+        // Throttle color updates
+        const now = performance.now();
+        if (now - this.lastColorUpdate < this.COLOR_THROTTLE_MS) return;
+        this.lastColorUpdate = now;
+
         // Get color at cursor position
         const color = this.getColorAtPosition(e.clientX, e.clientY);
         
@@ -157,6 +172,11 @@ class PickyContentScript {
         e.stopPropagation();
 
         const color = this.getColorAtPosition(e.clientX, e.clientY);
+        
+        // Visual feedback - flash the cursor circle
+        this.cursorCircle.classList.remove('flash');
+        void this.cursorCircle.offsetWidth; // trigger reflow
+        this.cursorCircle.classList.add('flash');
         
         // Send selected color to popup
         this.sendMessage({
@@ -195,6 +215,10 @@ class PickyContentScript {
         const element = this.findTextElement(e.target);
         
         if (element) {
+            // Visual feedback - flash the element
+            element.classList.add('picky-typo-flash');
+            setTimeout(() => element.classList.remove('picky-typo-flash'), 400);
+            
             const typography = this.extractTypography(element);
             
             // Send typography data to popup
@@ -214,47 +238,82 @@ class PickyContentScript {
     }
 
     findTextElement(element) {
-        // Check if element has text content
-        if (element && element.textContent && element.textContent.trim()) {
+        // Check if element itself has direct text content (not just descendants)
+        if (element && this.hasDirectText(element)) {
             return element;
         }
         
-        // Check parent elements
+        // Walk up to find nearest block-level ancestor with direct text
         let parent = element.parentElement;
         while (parent && parent !== document.body) {
-            if (parent.textContent && parent.textContent.trim()) {
+            if (this.hasDirectText(parent)) {
                 return parent;
             }
+            // Stop at block-level elements to avoid returning overly broad containers
+            const display = window.getComputedStyle(parent).display;
+            if (display === 'block' || display === 'flex' || display === 'grid') {
+                break;
+            }
             parent = parent.parentElement;
+        }
+        
+        // Fallback: return original element if it has any text descendants
+        if (element && element.textContent && element.textContent.trim()) {
+            return element;
         }
         
         return null;
     }
 
+    hasDirectText(element) {
+        // Check for direct text nodes (not just descendant text)
+        for (const node of element.childNodes) {
+            if (node.nodeType === Node.TEXT_NODE && node.textContent.trim()) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     // Utility Methods
     getColorAtPosition(x, y) {
-        // Create canvas element to capture pixel data
-        const canvas = document.createElement('canvas');
-        const context = canvas.getContext('2d');
-        
-        // Set canvas size to viewport
-        canvas.width = window.innerWidth;
-        canvas.height = window.innerHeight;
-        
         try {
-            // Use html2canvas-like approach - capture screenshot of page
-            // For simplicity, we'll use document.elementFromPoint to get the element color
             const element = document.elementFromPoint(x, y);
             
             if (element) {
                 const styles = window.getComputedStyle(element);
                 const bgColor = styles.backgroundColor;
+                const bgImage = styles.backgroundImage;
+                
+                // If element has a gradient background, try to parse the first color
+                if (bgImage && bgImage !== 'none' && bgImage.includes('gradient')) {
+                    const gradientColor = this.extractGradientColor(bgImage);
+                    if (gradientColor) {
+                        return this.convertColorFormats(gradientColor);
+                    }
+                }
+                
+                // Use background color if it's not transparent
+                if (bgColor && bgColor !== 'rgba(0, 0, 0, 0)' && bgColor !== 'transparent') {
+                    return this.convertColorFormats(bgColor);
+                }
+                
+                // Fall back to text color
                 const color = styles.color;
+                if (color) {
+                    return this.convertColorFormats(color);
+                }
                 
-                // Use background color if available, otherwise text color
-                const targetColor = bgColor !== 'rgba(0, 0, 0, 0)' ? bgColor : color;
-                
-                return this.convertColorFormats(targetColor);
+                // Walk up to find a visible background
+                let parent = element.parentElement;
+                while (parent && parent !== document.body) {
+                    const parentStyles = window.getComputedStyle(parent);
+                    const parentBg = parentStyles.backgroundColor;
+                    if (parentBg && parentBg !== 'rgba(0, 0, 0, 0)' && parentBg !== 'transparent') {
+                        return this.convertColorFormats(parentBg);
+                    }
+                    parent = parent.parentElement;
+                }
             }
         } catch (error) {
             console.error('Error getting color at position:', error);
@@ -266,6 +325,12 @@ class PickyContentScript {
             rgba: 'rgba(0, 0, 0, 1)',
             hsl: 'hsl(0, 0%, 0%)'
         };
+    }
+
+    extractGradientColor(gradientStr) {
+        // Extract first color from linear/radial gradient
+        const colorMatch = gradientStr.match(/(rgba?\([^)]+\)|#[0-9a-fA-F]{3,8}|hsl[a]?\([^)]+\))/);
+        return colorMatch ? colorMatch[1] : null;
     }
 
     convertColorFormats(colorString) {
