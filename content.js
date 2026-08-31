@@ -4,8 +4,6 @@ class PickyContentScript {
         this.colorPickerActive = false;
         this.typographyPickerActive = false;
         this.cursorCircle = null;
-        this.colorCanvas = null;
-        this.colorCtx = null;
         this.lastColorUpdate = 0;
         this.COLOR_THROTTLE_MS = 50;
         this.init();
@@ -100,12 +98,6 @@ class PickyContentScript {
             </div>
         `;
         document.body.appendChild(this.cursorCircle);
-
-        // Create off-screen canvas for pixel color sampling
-        this.colorCanvas = document.createElement('canvas');
-        this.colorCanvas.width = 1;
-        this.colorCanvas.height = 1;
-        this.colorCtx = this.colorCanvas.getContext('2d', { willReadFrequently: true });
     }
 
     showCursorCircle() {
